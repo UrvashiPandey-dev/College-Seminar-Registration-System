@@ -24,7 +24,7 @@ public class StudentDAO{
 		return ps.executeUpdate() == 1;
 			}
 		}
-		public List<Student> getAllStudent() throws SQLException{
+		public List<Student> getAllStudents() throws SQLException{
 	     List<Student> students = new ArrayList<>();
 	     
 	     String sql = "select * from Student";
@@ -51,6 +51,23 @@ public class StudentDAO{
 				{
 					ps.setString(1, studentId);
 					return ps.executeUpdate() == 1;
+					}
+				}
+				
+			public boolean updateStudent(Student student) throws SQLException{
+				
+				String sql = "update Student set name = ? , email = ? , department = ? , academic_year = ? where student_id = ?";
+				
+				try(Connection con = DBConnection.getConnection() ; PreparedStatement ps = con.prepareStatement(sql))
+				{
+					ps.setString(1, student.getName());
+					ps.setString(2, student.getEmail());
+					ps.setString(3,student.getDepartment());
+					ps.setInt(4 , student.getAcademicYear());
+					ps.setString(5, student.getStudentId());
+					
+					return ps.executeUpdate() == 1;
+					
 					}
 				}
 		}
