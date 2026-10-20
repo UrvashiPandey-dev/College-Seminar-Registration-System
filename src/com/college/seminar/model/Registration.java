@@ -3,8 +3,9 @@ package com.college.seminar.model;
 
 import java.time.LocalDate;
 
-public class Registration {
-
+public class Registration implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private String registrationId;
     private String studentId;
     private String seminarId;
@@ -57,4 +58,7 @@ public class Registration {
         this.status = status;
     }
 }
-
+public class Registration implements java.io.Serializable{
+	private static final long serialVersionUID = 1L;
+	
+	}
