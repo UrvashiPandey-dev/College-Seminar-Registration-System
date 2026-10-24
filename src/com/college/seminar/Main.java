@@ -2,6 +2,11 @@
 package com.college.seminar;
 
 import com.college.seminar.model.Student;
+import com.college.seminar.model.Registration;
+import com.college.seminar.service.SeminarService;
+import com.college.seminar.service.RegistrationService;
+import com.college.seminar.service.ReportService;
+import com.college.seminar.model.Seminar;
 import com.college.seminar.service.SpeakerService;
 import com.college.seminar.model.Speaker;
 import com.college.seminar.service.StudentService;
@@ -17,6 +22,10 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.Node;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -24,10 +33,12 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 import java.sql.SQLException;
+import java.time.LocalTime;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -46,6 +57,8 @@ public class Main extends Application {
     private static final String BORDER = "#E9EAF2";
 
     private final StudentService studentService = new StudentService();
+    private final SeminarService seminarService = new SeminarService();
+    private final RegistrationService registrationService = new RegistrationService();
     private final SpeakerService speakerService = new SpeakerService();
 
     private Stage mainStage;
@@ -157,15 +170,9 @@ public class Main extends Application {
         speakersBtn.setOnAction(e ->
                 showSpeakers());
         seminarsBtn.setOnAction(e ->
-                showModule("Seminars", "Create and manage college seminars.",
-                        "Seminar management"));
-        registrationsBtn.setOnAction(e ->
-                showModule("Registrations", "View and manage seminar registrations.",
-                        "Registration management"));
-        reportsBtn.setOnAction(e ->
-                showModule("Reports & Statistics",
-                        "Explore registration and seminar statistics.",
-                        "Reports"));
+                showSeminars());
+        registrationsBtn.setOnAction(e -> showRegistrations());
+        reportsBtn.setOnAction(e -> showReports());
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
@@ -434,8 +441,7 @@ public class Main extends Application {
         addStudent.setOnAction(e -> showStudentForm(null));
         viewStudents.setOnAction(e -> showStudents());
         viewSeminars.setOnAction(e ->
-                showModule("Seminars", "Create and manage college seminars.",
-                        "Seminar management"));
+                showSeminars());
 
         actionRow.getChildren().addAll(addStudent, viewStudents, viewSeminars);
         quickActions.getChildren().add(actionRow);
@@ -1266,6 +1272,606 @@ public class Main extends Application {
             showAlert(Alert.AlertType.WARNING, "Invalid Speaker ID",
                 ex.getMessage());
         }
+    }
+
+
+    // ---------- SEMINAR MANAGEMENT ----------
+
+    private void showSeminars() {
+        setPage("Seminar Management", "Create and manage college seminars.");
+
+        TextField search = new TextField();
+        search.setPromptText("Search seminars by ID, title, topic, category or venue");
+        search.setPrefWidth(320);
+
+        Button searchBtn = actionButton("Search", NAVY);
+        Button refreshBtn = actionButton("Refresh", BLUE);
+        Button addBtn = actionButton("+ Add Seminar", "#9A7BEA");
+        Button editBtn = actionButton("Edit Selected", NAVY);
+        Button deleteBtn = actionButton("Delete Selected", "#D9534F");
+
+        TableView<Seminar> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<Seminar, String> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("seminarId"));
+
+        TableColumn<Seminar, String> titleCol = new TableColumn<>("Title");
+        titleCol.setCellValueFactory(new PropertyValueFactory<>("title"));
+
+        TableColumn<Seminar, String> topicCol = new TableColumn<>("Topic");
+        topicCol.setCellValueFactory(new PropertyValueFactory<>("topic"));
+
+        TableColumn<Seminar, String> categoryCol = new TableColumn<>("Category");
+        categoryCol.setCellValueFactory(new PropertyValueFactory<>("category"));
+
+        TableColumn<Seminar, String> speakerCol = new TableColumn<>("Speaker ID");
+        speakerCol.setCellValueFactory(new PropertyValueFactory<>("speakerId"));
+
+        TableColumn<Seminar, LocalDate> dateCol = new TableColumn<>("Date");
+        dateCol.setCellValueFactory(new PropertyValueFactory<>("seminarDate"));
+
+        TableColumn<Seminar, LocalTime> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(new PropertyValueFactory<>("seminarTime"));
+
+        TableColumn<Seminar, String> venueCol = new TableColumn<>("Venue");
+        venueCol.setCellValueFactory(new PropertyValueFactory<>("venue"));
+
+        TableColumn<Seminar, Integer> capacityCol = new TableColumn<>("Capacity");
+        capacityCol.setCellValueFactory(new PropertyValueFactory<>("capacity"));
+
+        table.getColumns().addAll(idCol, titleCol, topicCol, categoryCol,
+                speakerCol, dateCol, timeCol, venueCol, capacityCol);
+
+        Runnable reload = () -> {
+            try {
+                table.getItems().setAll(seminarService.getAllSeminars());
+            } catch (SQLException ex) {
+                showAlert(Alert.AlertType.ERROR, "Database Error",
+                        "Could not load seminars: " + ex.getMessage());
+            }
+        };
+
+        Runnable filter = () -> {
+            String q = search.getText() == null
+                    ? "" : search.getText().trim().toLowerCase();
+            try {
+                List<Seminar> all = seminarService.getAllSeminars();
+                table.getItems().setAll(all.stream().filter(item ->
+                        q.isEmpty()
+                        || safe(item.getSeminarId()).toLowerCase().contains(q)
+                        || safe(item.getTitle()).toLowerCase().contains(q)
+                        || safe(item.getTopic()).toLowerCase().contains(q)
+                        || safe(item.getCategory()).toLowerCase().contains(q)
+                        || safe(item.getSpeakerId()).toLowerCase().contains(q)
+                        || safe(item.getVenue()).toLowerCase().contains(q)
+                        || String.valueOf(item.getSeminarDate()).contains(q)
+                ).toList());
+            } catch (SQLException ex) {
+                showAlert(Alert.AlertType.ERROR, "Search Failed", ex.getMessage());
+            }
+        };
+
+        searchBtn.setOnAction(e -> filter.run());
+        search.setOnAction(e -> filter.run());
+        refreshBtn.setOnAction(e -> {
+            search.clear();
+            reload.run();
+        });
+        addBtn.setOnAction(e -> showSeminarForm(null));
+        editBtn.setOnAction(e -> {
+            Seminar selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                showAlert(Alert.AlertType.WARNING, "Select Seminar",
+                        "Select a seminar to edit.");
+            } else {
+                showSeminarForm(selected);
+            }
+        });
+        deleteBtn.setOnAction(e -> {
+            Seminar selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                showAlert(Alert.AlertType.WARNING, "Select Seminar",
+                        "Select a seminar to delete.");
+                return;
+            }
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Delete Seminar");
+            confirm.setHeaderText("Delete " + selected.getTitle() + "?");
+            confirm.setContentText("This action cannot be undone.");
+            Optional<ButtonType> answer = confirm.showAndWait();
+            if (answer.isPresent() && answer.get() == ButtonType.OK) {
+                try {
+                    if (seminarService.deleteSeminar(selected.getSeminarId())) {
+                        reload.run();
+                    } else {
+                        showAlert(Alert.AlertType.WARNING, "Not Deleted",
+                                "No seminar record was deleted.");
+                    }
+                } catch (SQLException ex) {
+                    showAlert(Alert.AlertType.ERROR, "Delete Failed",
+                            "The seminar may have registrations linked to it.\n"
+                                    + ex.getMessage());
+                }
+            }
+        });
+
+        HBox searchRow = new HBox(10, search, searchBtn, refreshBtn, addBtn);
+        searchRow.setAlignment(Pos.CENTER_LEFT);
+        HBox actions = new HBox(10, editBtn, deleteBtn);
+
+        VBox card = panel("All Seminars", "Select a seminar to edit or delete");
+        VBox.setVgrow(table, Priority.ALWAYS);
+        card.getChildren().addAll(searchRow, table, actions);
+        VBox.setVgrow(card, Priority.ALWAYS);
+        content.getChildren().add(card);
+
+        reload.run();
+    }
+
+    private void showSeminarForm(Seminar existing) {
+        Dialog<Seminar> dialog = new Dialog<>();
+        dialog.setTitle(existing == null ? "Add Seminar" : "Edit Seminar");
+        dialog.setHeaderText("Enter seminar details");
+
+        ButtonType saveType = new ButtonType(
+                existing == null ? "Add" : "Save",
+                ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+
+        TextField id = new TextField(existing == null ? "" : existing.getSeminarId());
+        id.setPromptText("e.g. SEM104");
+        id.setDisable(existing != null);
+
+        TextField title = new TextField(existing == null ? "" : existing.getTitle());
+        TextField topic = new TextField(existing == null ? "" : existing.getTopic());
+        TextField category = new TextField(existing == null ? "" : existing.getCategory());
+        TextField time = new TextField(existing == null ? "10:00" :
+                existing.getSeminarTime().toString());
+        time.setPromptText("HH:mm, e.g. 14:30");
+        TextField venue = new TextField(existing == null ? "" : existing.getVenue());
+
+        ComboBox<Speaker> speaker = new ComboBox<>();
+        speaker.setMaxWidth(Double.MAX_VALUE);
+        speaker.setPromptText("Choose speaker");
+
+        try {
+            speaker.getItems().setAll(speakerService.getAllSpeakers());
+        } catch (SQLException ex) {
+            showAlert(Alert.AlertType.ERROR, "Database Error",
+                    "Could not load speakers: " + ex.getMessage());
+            return;
+        }
+
+        javafx.util.StringConverter<Speaker> converter =
+                new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(Speaker value) {
+                return value == null ? "" :
+                        value.getSpeakerId() + " - " + value.getName();
+            }
+            @Override
+            public Speaker fromString(String value) {
+                return null;
+            }
+        };
+        speaker.setConverter(converter);
+
+        if (existing != null) {
+            speaker.getItems().stream()
+                    .filter(sp -> sp.getSpeakerId().equals(existing.getSpeakerId()))
+                    .findFirst().ifPresent(speaker::setValue);
+        } else if (!speaker.getItems().isEmpty()) {
+            speaker.getSelectionModel().selectFirst();
+        }
+
+        DatePicker date = new DatePicker(existing == null
+                ? LocalDate.now().plusDays(1) : existing.getSeminarDate());
+        Spinner<Integer> capacity = new Spinner<>(1, 1000,
+                existing == null ? 30 : existing.getCapacity());
+        capacity.setEditable(true);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(9);
+        grid.setPadding(new Insets(10));
+
+        String[] labels = {"Seminar ID", "Title", "Topic", "Category",
+                "Speaker", "Date", "Time (HH:mm)", "Venue", "Capacity"};
+        Node[] fields = {id, title, topic, category, speaker, date, time, venue, capacity};
+        for (int i = 0; i < labels.length; i++) {
+            grid.add(new Label(labels[i]), 0, i);
+            grid.add(fields[i], 1, i);
+            if (fields[i] instanceof javafx.scene.control.Control control) {
+                control.setMaxWidth(Double.MAX_VALUE);
+            }
+        }
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().setPrefWidth(480);
+
+        Node saveButton = dialog.getDialogPane().lookupButton(saveType);
+        saveButton.addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+            String error = null;
+            if (id.getText().isBlank() || title.getText().isBlank()
+                    || topic.getText().isBlank() || category.getText().isBlank()
+                    || venue.getText().isBlank()) {
+                error = "Please fill in all fields.";
+            } else if (speaker.getValue() == null) {
+                error = "Please select a speaker.";
+            } else if (date.getValue() == null
+                    || date.getValue().isBefore(LocalDate.now())) {
+                error = "Seminar date cannot be in the past.";
+            } else {
+                try {
+                    LocalTime.parse(time.getText().trim());
+                } catch (Exception ex) {
+                    error = "Enter a valid time such as 14:30.";
+                }
+            }
+            if (error != null) {
+                event.consume();
+                showAlert(Alert.AlertType.WARNING, "Invalid Details", error);
+            }
+        });
+
+        dialog.setResultConverter(button -> {
+            if (button != saveType) return null;
+            return new Seminar(id.getText().trim(), title.getText().trim(),
+                    topic.getText().trim(), category.getText().trim(),
+                    speaker.getValue().getSpeakerId(), date.getValue(),
+                    LocalTime.parse(time.getText().trim()), venue.getText().trim(),
+                    capacity.getValue());
+        });
+
+        Optional<Seminar> result = dialog.showAndWait();
+        if (result.isEmpty()) return;
+
+        try {
+            boolean saved = existing == null
+                    ? seminarService.addSeminar(result.get())
+                    : seminarService.updateSeminar(result.get());
+            if (saved) {
+                showSeminars();
+                showAlert(Alert.AlertType.INFORMATION, "Success",
+                        existing == null ? "Seminar added successfully."
+                                : "Seminar updated successfully.");
+            } else {
+                showAlert(Alert.AlertType.WARNING, "Not Saved",
+                        "No seminar record was changed.");
+            }
+        } catch (SQLException | IllegalArgumentException ex) {
+            showAlert(Alert.AlertType.ERROR, "Save Failed", ex.getMessage());
+        }
+    }
+
+
+    // ---------- REGISTRATION MANAGEMENT ----------
+
+    private void showRegistrations() {
+        setPage("Registrations", "View and manage seminar registrations.");
+
+        TextField search = new TextField();
+        search.setPromptText("Search by registration ID, student, seminar or status");
+        search.setPrefWidth(340);
+
+        Button searchBtn = actionButton("Search", NAVY);
+        Button refreshBtn = actionButton("Refresh", BLUE);
+        Button addBtn = actionButton("+ Add Registration", "#9A7BEA");
+        Button cancelBtn = actionButton("Cancel Registration", "#D9534F");
+
+        TableView<Registration> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<Registration, String> idCol = new TableColumn<>("Registration ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("registrationId"));
+
+        TableColumn<Registration, String> studentCol = new TableColumn<>("Student ID");
+        studentCol.setCellValueFactory(new PropertyValueFactory<>("studentId"));
+
+        TableColumn<Registration, String> seminarCol = new TableColumn<>("Seminar ID");
+        seminarCol.setCellValueFactory(new PropertyValueFactory<>("seminarId"));
+
+        TableColumn<Registration, LocalDate> dateCol = new TableColumn<>("Registration Date");
+        dateCol.setCellValueFactory(new PropertyValueFactory<>("registrationDate"));
+
+        TableColumn<Registration, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
+
+        table.getColumns().addAll(idCol, studentCol, seminarCol, dateCol, statusCol);
+
+        Runnable reload = () -> {
+            try {
+                table.getItems().setAll(registrationService.getAllRegistrations());
+            } catch (SQLException ex) {
+                showAlert(Alert.AlertType.ERROR, "Database Error",
+                        "Could not load registrations: " + ex.getMessage());
+            }
+        };
+
+        Runnable filter = () -> {
+            String q = search.getText() == null
+                    ? "" : search.getText().trim().toLowerCase();
+            try {
+                List<Registration> all = registrationService.getAllRegistrations();
+                table.getItems().setAll(all.stream().filter(r ->
+                        q.isEmpty()
+                        || safe(r.getRegistrationId()).toLowerCase().contains(q)
+                        || safe(r.getStudentId()).toLowerCase().contains(q)
+                        || safe(r.getSeminarId()).toLowerCase().contains(q)
+                        || safe(r.getStatus()).toLowerCase().contains(q)
+                        || String.valueOf(r.getRegistrationDate()).contains(q)
+                ).toList());
+            } catch (SQLException ex) {
+                showAlert(Alert.AlertType.ERROR, "Search Failed", ex.getMessage());
+            }
+        };
+
+        searchBtn.setOnAction(e -> filter.run());
+        search.setOnAction(e -> filter.run());
+        refreshBtn.setOnAction(e -> {
+            search.clear();
+            reload.run();
+        });
+        addBtn.setOnAction(e -> showRegistrationForm());
+
+        cancelBtn.setOnAction(e -> {
+            Registration selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                showAlert(Alert.AlertType.WARNING, "Select Registration",
+                        "Select a registration to cancel.");
+                return;
+            }
+            if ("CANCELLED".equalsIgnoreCase(selected.getStatus())) {
+                showAlert(Alert.AlertType.INFORMATION, "Already Cancelled",
+                        "This registration is already cancelled.");
+                return;
+            }
+
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Cancel Registration");
+            confirm.setHeaderText("Cancel " + selected.getRegistrationId() + "?");
+            confirm.setContentText("The registration record will be retained as CANCELLED.");
+            Optional<ButtonType> answer = confirm.showAndWait();
+
+            if (answer.isPresent() && answer.get() == ButtonType.OK) {
+                Registration cancelled = new Registration(
+                        selected.getRegistrationId(),
+                        selected.getStudentId(),
+                        selected.getSeminarId(),
+                        selected.getRegistrationDate(),
+                        "CANCELLED");
+
+                try {
+                    if (registrationService.updateRegistration(cancelled)) {
+                        reload.run();
+                        showAlert(Alert.AlertType.INFORMATION, "Cancelled",
+                                "Registration marked as CANCELLED.");
+                    } else {
+                        showAlert(Alert.AlertType.WARNING, "Not Updated",
+                                "The registration status was not changed.");
+                    }
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showAlert(Alert.AlertType.ERROR, "Cancellation Failed",
+                            ex.getMessage());
+                }
+            }
+        });
+
+        HBox searchRow = new HBox(10, search, searchBtn, refreshBtn, addBtn);
+        searchRow.setAlignment(Pos.CENTER_LEFT);
+        HBox actions = new HBox(10, cancelBtn);
+
+        VBox card = panel("All Registrations",
+                "Select a registration to cancel it without deleting its record");
+        VBox.setVgrow(table, Priority.ALWAYS);
+        card.getChildren().addAll(searchRow, table, actions);
+        VBox.setVgrow(card, Priority.ALWAYS);
+        content.getChildren().add(card);
+
+        reload.run();
+    }
+
+    private void showRegistrationForm() {
+        Dialog<Registration> dialog = new Dialog<>();
+        dialog.setTitle("Add Registration");
+        dialog.setHeaderText("Register a student for a seminar");
+
+        ButtonType saveType = new ButtonType(
+                "Register", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+
+        TextField idField = new TextField();
+        idField.setPromptText("e.g. REG107");
+
+        ComboBox<Student> studentBox = new ComboBox<>();
+        studentBox.setPromptText("Choose student");
+        studentBox.setMaxWidth(Double.MAX_VALUE);
+
+        ComboBox<Seminar> seminarBox = new ComboBox<>();
+        seminarBox.setPromptText("Choose seminar");
+        seminarBox.setMaxWidth(Double.MAX_VALUE);
+
+        try {
+            studentBox.getItems().setAll(studentService.getAllStudents());
+            seminarBox.getItems().setAll(seminarService.getAllSeminars());
+        } catch (SQLException ex) {
+            showAlert(Alert.AlertType.ERROR, "Database Error",
+                    "Could not load students or seminars: " + ex.getMessage());
+            return;
+        }
+
+        studentBox.setConverter(new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(Student value) {
+                return value == null ? "" :
+                        value.getStudentId() + " - " + value.getName();
+            }
+            @Override
+            public Student fromString(String value) {
+                return null;
+            }
+        });
+
+        seminarBox.setConverter(new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(Seminar value) {
+                return value == null ? "" :
+                        value.getSeminarId() + " - " + value.getTitle();
+            }
+            @Override
+            public Seminar fromString(String value) {
+                return null;
+            }
+        });
+
+        if (!studentBox.getItems().isEmpty()) {
+            studentBox.getSelectionModel().selectFirst();
+        }
+        if (!seminarBox.getItems().isEmpty()) {
+            seminarBox.getSelectionModel().selectFirst();
+        }
+
+        Label dateValue = new Label(LocalDate.now().toString());
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(10));
+        grid.add(new Label("Registration ID"), 0, 0);
+        grid.add(idField, 1, 0);
+        grid.add(new Label("Student"), 0, 1);
+        grid.add(studentBox, 1, 1);
+        grid.add(new Label("Seminar"), 0, 2);
+        grid.add(seminarBox, 1, 2);
+        grid.add(new Label("Registration Date"), 0, 3);
+        grid.add(dateValue, 1, 3);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().setPrefWidth(480);
+
+        Node saveButton = dialog.getDialogPane().lookupButton(saveType);
+        saveButton.addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+            String error = null;
+            if (idField.getText().isBlank()) {
+                error = "Registration ID is required.";
+            } else if (studentBox.getValue() == null) {
+                error = "Please select a student.";
+            } else if (seminarBox.getValue() == null) {
+                error = "Please select a seminar.";
+            }
+
+            if (error != null) {
+                event.consume();
+                showAlert(Alert.AlertType.WARNING, "Invalid Registration", error);
+            }
+        });
+
+        dialog.setResultConverter(button -> {
+            if (button != saveType) return null;
+            return new Registration(
+                    idField.getText().trim(),
+                    studentBox.getValue().getStudentId(),
+                    seminarBox.getValue().getSeminarId(),
+                    LocalDate.now(),
+                    "CONFIRMED");
+        });
+
+        Optional<Registration> result = dialog.showAndWait();
+        if (result.isEmpty()) return;
+
+        try {
+            if (registrationService.addRegistration(result.get())) {
+                showRegistrations();
+                showAlert(Alert.AlertType.INFORMATION, "Success",
+                        "Registration added successfully.");
+            } else {
+                showAlert(Alert.AlertType.WARNING, "Not Added",
+                        "Registration was not added.");
+            }
+        } catch (SQLException | IllegalArgumentException ex) {
+            showAlert(Alert.AlertType.ERROR, "Registration Failed", ex.getMessage());
+        }
+    }
+
+
+    // ---------- REPORTS & STATISTICS ----------
+
+    private void showReports() {
+        setPage("Reports & Statistics",
+                "Explore confirmed registration statistics.");
+
+        Button refreshBtn = actionButton("Refresh Reports", BLUE);
+        Label departmentHeading = label(
+                "Confirmed Registrations by Department", 16, NAVY, true);
+        TableView<Map.Entry<String, Long>> departmentTable = createReportTable();
+
+        Label categoryHeading = label(
+                "Confirmed Registrations by Seminar Category", 16, NAVY, true);
+        TableView<Map.Entry<String, Long>> categoryTable = createReportTable();
+
+        Label combinedHeading = label(
+                "Department + Category Breakdown", 16, NAVY, true);
+        TableView<Map.Entry<String, Long>> combinedTable = createReportTable();
+
+        Runnable loadReports = () -> {
+            try {
+                ReportService reportService = new ReportService();
+
+                departmentTable.getItems().setAll(
+                        reportService.getDepartmentStatistics().entrySet());
+                categoryTable.getItems().setAll(
+                        reportService.getCategoryStatistics().entrySet());
+                combinedTable.getItems().setAll(
+                        reportService.getCombinedStatistics().entrySet());
+
+            } catch (SQLException ex) {
+                showAlert(Alert.AlertType.ERROR, "Reports Error",
+                        "Could not load reports: " + ex.getMessage());
+            }
+        };
+
+        refreshBtn.setOnAction(e -> loadReports.run());
+
+        VBox departmentCard = panel("Department Statistics",
+                "Number of confirmed registrations per department");
+        departmentCard.getChildren().addAll(departmentHeading, departmentTable);
+
+        VBox categoryCard = panel("Category Statistics",
+                "Number of confirmed registrations per seminar category");
+        categoryCard.getChildren().addAll(categoryHeading, categoryTable);
+
+        VBox combinedCard = panel("Combined Statistics",
+                "Confirmed registrations grouped by department and category");
+        combinedCard.getChildren().addAll(combinedHeading, combinedTable);
+
+        VBox reportsContent = new VBox(16,
+                refreshBtn, departmentCard, categoryCard, combinedCard);
+        reportsContent.setPadding(new Insets(5, 0, 10, 0));
+
+        content.getChildren().add(reportsContent);
+        loadReports.run();
+    }
+
+    private TableView<Map.Entry<String, Long>> createReportTable() {
+        TableView<Map.Entry<String, Long>> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setPrefHeight(180);
+        table.setPlaceholder(new Label("No confirmed registration data available."));
+
+        TableColumn<Map.Entry<String, Long>, String> groupCol =
+                new TableColumn<>("Department / Category");
+        groupCol.setCellValueFactory(cell ->
+                new javafx.beans.property.SimpleStringProperty(
+                        cell.getValue().getKey()));
+
+        TableColumn<Map.Entry<String, Long>, Number> countCol =
+                new TableColumn<>("Confirmed Registrations");
+        countCol.setCellValueFactory(cell ->
+                new javafx.beans.property.SimpleLongProperty(
+                        cell.getValue().getValue()));
+
+        table.getColumns().addAll(groupCol, countCol);
+        return table;
     }
 
     // ---------- OTHER MODULES ----------
