@@ -58,7 +58,3 @@ public class Registration implements java.io.Serializable {
         this.status = status;
     }
 }
-public class Registration implements java.io.Serializable{
-	private static final long serialVersionUID = 1L;
-	
-	}
