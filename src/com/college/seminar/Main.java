@@ -31,6 +31,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.sql.SQLException;
 import java.time.LocalTime;
@@ -45,16 +46,17 @@ import java.util.Optional;
 public class Main extends Application {
 
     // ---------- THEME ----------
-    private static final String BG = "#F5F7FC";
-    private static final String NAVY = "#202747";
-    private static final String BLUE = "#7189E8";
-    private static final String PINK = "#F2B7D0";
-    private static final String MELON = "#FFB49A";
-    private static final String PURPLE = "#BDB2F4";
-    private static final String WHITE = "#FFFFFF";
-    private static final String INK = "#252B43";
-    private static final String MUTED = "#858BA2";
-    private static final String BORDER = "#E9EAF2";
+    private static final String BG = "#102716";
+    private static final String NAVY = "#091A0D";
+    private static final String BLUE = "#527A32";
+    private static final String PINK = "#EDF6A1";
+    private static final String MELON = "#98AF5B";
+    private static final String PURPLE = "#315A35";
+    private static final String WHITE = "#EDF6A1";
+    private static final String PANEL = "#1A3822";
+    private static final String INK = "#EDF6A1";
+    private static final String MUTED = "#B7C99D";
+    private static final String BORDER = "#527A32";
 
     private final StudentService studentService = new StudentService();
     private final SeminarService seminarService = new SeminarService();
@@ -68,7 +70,7 @@ public class Main extends Application {
     private Label pageTitle;
     private Label pageDescription;
 
-    private boolean sidebarOpen = false;
+    private boolean sidebarOpen = true;
 
     private ObservableList<Student> studentData =
             FXCollections.observableArrayList();
@@ -78,6 +80,7 @@ public class Main extends Application {
     @Override
     public void start(Stage stage) {
         mainStage = stage;
+        stage.initStyle(StageStyle.UNDECORATED);
 
         root = new BorderPane();
         root.setStyle("-fx-background-color: " + BG + ";");
@@ -103,17 +106,70 @@ public class Main extends Application {
         );
 
         mainArea.setCenter(scrollPane);
+        root.setTop(buildWindowBar(stage));
+        root.setLeft(sidebar);
         root.setCenter(mainArea);
 
         Scene scene = new Scene(root, 1280, 820);
+        java.net.URL themeUrl = getClass().getResource("theme.css");
+        if (themeUrl != null) {
+            scene.getStylesheets().add(themeUrl.toExternalForm());
+        } else {
+            java.io.File themeFile = new java.io.File("src/com/college/seminar/theme.css");
+            if (themeFile.isFile()) {
+                scene.getStylesheets().add(themeFile.toURI().toString());
+            }
+        }
 
-        stage.setTitle("College Seminar Registration System");
+        stage.setTitle("SeminarSphere | Campus Events");
         stage.setMinWidth(1000);
         stage.setMinHeight(700);
         stage.setScene(scene);
 
         showDashboard();
         stage.show();
+    }
+
+    // Custom dark title bar removes the operating-system white title strip.
+    private HBox buildWindowBar(Stage stage) {
+        HBox bar = new HBox(10);
+        bar.setAlignment(Pos.CENTER_LEFT);
+        bar.setPadding(new Insets(0, 10, 0, 14));
+        bar.setMinHeight(34);
+        bar.setPrefHeight(34);
+        bar.setStyle("-fx-background-color: #091A0D; -fx-border-color: transparent transparent #315A35 transparent;");
+
+        Label appName = new Label("●  SeminarSphere");
+        appName.setStyle("-fx-text-fill: #EDF6A1; -fx-font-size: 11px; -fx-font-weight: bold;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button minimize = new Button("—");
+        Button maximize = new Button("□");
+        Button close = new Button("×");
+        for (Button b : List.of(minimize, maximize, close)) {
+            b.setMinSize(32, 26);
+            b.setStyle("-fx-background-color: transparent; -fx-text-fill: #EDF6A1; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;");
+            b.setOnMouseEntered(e -> b.setStyle("-fx-background-color: #527A32; -fx-text-fill: #091A0D; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;"));
+            b.setOnMouseExited(e -> b.setStyle("-fx-background-color: transparent; -fx-text-fill: #EDF6A1; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;"));
+        }
+        minimize.setOnAction(e -> stage.setIconified(true));
+        maximize.setOnAction(e -> stage.setMaximized(!stage.isMaximized()));
+        close.setOnAction(e -> stage.close());
+
+        final double[] dragOffset = new double[2];
+        bar.setOnMousePressed(e -> {
+            dragOffset[0] = e.getSceneX();
+            dragOffset[1] = e.getSceneY();
+        });
+        bar.setOnMouseDragged(e -> {
+            if (!stage.isMaximized()) {
+                stage.setX(e.getScreenX() - dragOffset[0]);
+                stage.setY(e.getScreenY() - dragOffset[1]);
+            }
+        });
+        bar.getChildren().addAll(appName, spacer, minimize, maximize, close);
+        return bar;
     }
 
     // ---------- SIDEBAR ----------
@@ -129,32 +185,32 @@ public class Main extends Application {
         brand.setAlignment(Pos.CENTER_LEFT);
         brand.setPadding(new Insets(0, 0, 25, 2));
 
-        Label logo = new Label("CS");
+        Label logo = new Label("SS");
         logo.setMinSize(42, 42);
         logo.setAlignment(Pos.CENTER);
         logo.setStyle(
                 "-fx-background-color: " + BLUE + ";" +
                 "-fx-background-radius: 13;" +
-                "-fx-text-fill: white;" +
+                "-fx-text-fill: " + INK + ";" +
                 "-fx-font-size: 16px;" +
                 "-fx-font-weight: bold;"
         );
 
         VBox brandText = new VBox(3);
-        Label brandName = new Label("College Seminar");
-        brandName.setTextFill(Color.WHITE);
+        Label brandName = new Label("SeminarSphere");
+        brandName.setTextFill(Color.web(INK));
         brandName.setFont(Font.font("Arial", 15));
         brandName.setStyle("-fx-font-weight: bold;");
 
-        Label brandSub = new Label("REGISTRATION SYSTEM");
-        brandSub.setTextFill(Color.web("#AEB5D1"));
+        Label brandSub = new Label("CAMPUS EVENTS");
+        brandSub.setTextFill(Color.web(MUTED));
         brandSub.setFont(Font.font("Arial", 9));
 
         brandText.getChildren().addAll(brandName, brandSub);
         brand.getChildren().addAll(logo, brandText);
 
         Label menuLabel = new Label("WORKSPACE");
-        menuLabel.setTextFill(Color.web("#929AB9"));
+        menuLabel.setTextFill(Color.web(MELON));
         menuLabel.setFont(Font.font("Arial", 10));
         menuLabel.setPadding(new Insets(10, 0, 5, 8));
 
@@ -177,8 +233,8 @@ public class Main extends Application {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        Label footer = new Label("COLLEGE SEMINAR SYSTEM\nVersion 1.0");
-        footer.setTextFill(Color.web("#929AB9"));
+        Label footer = new Label("CAMPUS EVENTS\nSeminarSphere  •  v1.0");
+        footer.setTextFill(Color.web(MUTED));
         footer.setFont(Font.font("Arial", 10));
         footer.setPadding(new Insets(20, 5, 0, 5));
 
@@ -198,29 +254,18 @@ public class Main extends Application {
         button.setAlignment(Pos.CENTER_LEFT);
         button.setPadding(new Insets(0, 12, 0, 14));
         button.setFont(Font.font("Arial", 13));
-        button.setStyle(
-                "-fx-background-color: transparent;" +
-                "-fx-text-fill: #E6E9F7;" +
+        String normal = "-fx-background-color: transparent;" +
+                "-fx-text-fill: #EAF2D8;" +
                 "-fx-background-radius: 10;" +
-                "-fx-cursor: hand;"
-        );
-
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #343D62;" +
-                        "-fx-text-fill: white;" +
-                        "-fx-background-radius: 10;" +
-                        "-fx-cursor: hand;"
-                ));
-
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: transparent;" +
-                        "-fx-text-fill: #E6E9F7;" +
-                        "-fx-background-radius: 10;" +
-                        "-fx-cursor: hand;"
-                ));
-
+                "-fx-cursor: hand;";
+        String hover = "-fx-background-color: " + BLUE + ";" +
+                "-fx-text-fill: " + NAVY + ";" +
+                "-fx-background-radius: 10;" +
+                "-fx-font-weight: bold;" +
+                "-fx-cursor: hand;";
+        button.setStyle(normal);
+        button.setOnMouseEntered(e -> button.setStyle(hover));
+        button.setOnMouseExited(e -> button.setStyle(normal));
         return button;
     }
 
@@ -231,18 +276,29 @@ public class Main extends Application {
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(20, 32, 18, 32));
         header.setStyle(
-                "-fx-background-color: white;" +
+                "-fx-background-color: " + PANEL + ";" +
                 "-fx-border-color: transparent transparent " + BORDER + " transparent;"
         );
 
         Button menuToggle = new Button("☰");
         menuToggle.setMinSize(42, 42);
-        menuToggle.setStyle(
-                "-fx-background-color: " + BG + ";" +
+        String menuNormal = "-fx-background-color: " + NAVY + ";" +
+                "-fx-text-fill: " + PINK + ";" +
+                "-fx-border-color: " + BORDER + ";" +
+                "-fx-border-radius: 12;" +
                 "-fx-background-radius: 12;" +
                 "-fx-font-size: 19px;" +
-                "-fx-cursor: hand;"
-        );
+                "-fx-cursor: hand;";
+        String menuHover = "-fx-background-color: " + BLUE + ";" +
+                "-fx-text-fill: " + NAVY + ";" +
+                "-fx-border-color: " + PINK + ";" +
+                "-fx-border-radius: 12;" +
+                "-fx-background-radius: 12;" +
+                "-fx-font-size: 19px;" +
+                "-fx-cursor: hand;";
+        menuToggle.setStyle(menuNormal);
+        menuToggle.setOnMouseEntered(e -> menuToggle.setStyle(menuHover));
+        menuToggle.setOnMouseExited(e -> menuToggle.setStyle(menuNormal));
 
         menuToggle.setOnAction(e -> {
             sidebarOpen = !sidebarOpen;
@@ -283,7 +339,7 @@ public class Main extends Application {
                 "-fx-font-size: 12px;"
         );
 
-        Label brandIcon = new Label("CS");
+        Label brandIcon = new Label("SS");
         brandIcon.setMinSize(40, 40);
         brandIcon.setAlignment(Pos.CENTER);
         brandIcon.setStyle(
@@ -294,11 +350,11 @@ public class Main extends Application {
         );
 
         VBox brandInfo = new VBox(3);
-        Label collegeName = new Label("College Seminar");
+        Label collegeName = new Label("SeminarSphere");
         collegeName.setTextFill(Color.web(INK));
         collegeName.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
 
-        Label collegeSub = new Label("Management Portal");
+        Label collegeSub = new Label("Campus Event Management");
         collegeSub.setTextFill(Color.web(MUTED));
         collegeSub.setFont(Font.font("Arial", 10));
 
@@ -335,7 +391,7 @@ public class Main extends Application {
         VBox box = new VBox(14);
         box.setPadding(new Insets(20));
         box.setStyle(
-                "-fx-background-color: white;" +
+                "-fx-background-color: " + PANEL + ";" +
                 "-fx-background-radius: 18;" +
                 "-fx-border-color: " + BORDER + ";" +
                 "-fx-border-radius: 18;"
@@ -354,13 +410,19 @@ public class Main extends Application {
         Button button = new Button(text);
         button.setMinHeight(38);
         button.setPadding(new Insets(0, 16, 0, 16));
-        button.setStyle(
-                "-fx-background-color: " + color + ";" +
-                "-fx-text-fill: white;" +
+        String normal = "-fx-background-color: " + color + ";" +
+                "-fx-text-fill: " + (color.equals(PINK) ? NAVY : "#F4F8E8") + ";" +
                 "-fx-background-radius: 10;" +
                 "-fx-font-weight: bold;" +
-                "-fx-cursor: hand;"
-        );
+                "-fx-cursor: hand;";
+        String hover = "-fx-background-color: " + PINK + ";" +
+                "-fx-text-fill: " + NAVY + ";" +
+                "-fx-background-radius: 10;" +
+                "-fx-font-weight: bold;" +
+                "-fx-cursor: hand;";
+        button.setStyle(normal);
+        button.setOnMouseEntered(e -> button.setStyle(hover));
+        button.setOnMouseExited(e -> button.setStyle(normal));
         return button;
     }
 
@@ -387,12 +449,39 @@ public class Main extends Application {
                 13, MUTED, false
         );
 
-        VBox welcomeBox = new VBox(10, welcome, welcomeSub);
-        welcomeBox.setPadding(new Insets(25));
+        StackPane welcomeBox = new StackPane();
+        welcomeBox.setMinHeight(166);
+        welcomeBox.setPadding(new Insets(30));
         welcomeBox.setStyle(
-                "-fx-background-color: linear-gradient(to right, #E8ECFF, #FBE8F1);" +
-                "-fx-background-radius: 18;"
+                "-fx-background-color: linear-gradient(to right, #183B23, #315A35 68%, #527A32);" +
+                "-fx-background-radius: 18;" +
+                "-fx-border-color: #527A32;" +
+                "-fx-border-radius: 18;" +
+                "-fx-border-width: 1;"
         );
+        // Decorative abstract shapes recreate the reference mockup without external image assets.
+        Region shapeOne = new Region();
+        shapeOne.setPrefSize(220, 58);
+        shapeOne.setMaxSize(220, 58);
+        shapeOne.setStyle("-fx-background-color: #98AF5B; -fx-background-radius: 45;");
+        shapeOne.setRotate(-17);
+        shapeOne.setOpacity(0.30);
+        StackPane.setAlignment(shapeOne, Pos.CENTER_RIGHT);
+        StackPane.setMargin(shapeOne, new Insets(0, 18, 25, 0));
+
+        Region shapeTwo = new Region();
+        shapeTwo.setPrefSize(170, 52);
+        shapeTwo.setMaxSize(170, 52);
+        shapeTwo.setStyle("-fx-background-color: #EDF6A1; -fx-background-radius: 40;");
+        shapeTwo.setRotate(-17);
+        shapeTwo.setOpacity(0.23);
+        StackPane.setAlignment(shapeTwo, Pos.CENTER_RIGHT);
+        StackPane.setMargin(shapeTwo, new Insets(48, 45, 0, 0));
+
+        VBox welcomeText = new VBox(10, welcome, welcomeSub);
+        welcomeText.setMaxWidth(Double.MAX_VALUE);
+        StackPane.setAlignment(welcomeText, Pos.CENTER_LEFT);
+        welcomeBox.getChildren().addAll(shapeOne, shapeTwo, welcomeText);
 
         HBox stats = new HBox(16);
         stats.setAlignment(Pos.CENTER);
@@ -436,7 +525,7 @@ public class Main extends Application {
         HBox actionRow = new HBox(12);
         Button addStudent = actionButton("+  Add Student", BLUE);
         Button viewStudents = actionButton("View Students", NAVY);
-        Button viewSeminars = actionButton("View Seminars", "#9A7BEA");
+        Button viewSeminars = actionButton("View Seminars", PURPLE);
 
         addStudent.setOnAction(e -> showStudentForm(null));
         viewStudents.setOnAction(e -> showStudents());
@@ -459,7 +548,7 @@ public class Main extends Application {
         card.setPadding(new Insets(19));
         card.setMinHeight(145);
         card.setStyle(
-                "-fx-background-color: white;" +
+                "-fx-background-color: " + PANEL + ";" +
                 "-fx-background-radius: 17;" +
                 "-fx-border-color: " + BORDER + ";" +
                 "-fx-border-radius: 17;"
@@ -522,8 +611,8 @@ public class Main extends Application {
         Label tag = new Label("UPCOMING");
         tag.setPadding(new Insets(6, 8, 6, 8));
         tag.setStyle(
-                "-fx-background-color: #F0F2FF;" +
-                "-fx-text-fill: #6479D9;" +
+                "-fx-background-color: #315A35;" +
+                "-fx-text-fill: #EDF6A1;" +
                 "-fx-background-radius: 7;" +
                 "-fx-font-size: 9px;" +
                 "-fx-font-weight: bold;"
@@ -654,7 +743,7 @@ public class Main extends Application {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         table.setPlaceholder(new Label("No students found."));
         table.setStyle(
-                "-fx-background-color: white;" +
+                "-fx-background-color: " + PANEL + ";" +
                 "-fx-background-radius: 12;" +
                 "-fx-border-color: " + BORDER + ";" +
                 "-fx-border-radius: 12;"
@@ -676,7 +765,7 @@ public class Main extends Application {
         yearCol.setCellValueFactory(new PropertyValueFactory<>("academicYear"));
 
         TableColumn<Student, Student> actionCol = new TableColumn<>("Actions");
-
+        actionCol.setCellValueFactory(cellData -> new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue()));
         actionCol.setCellFactory(column -> new TableCell<Student, Student>() {
             private final Button editButton = new Button("Edit");
             private final Button deleteButton = new Button("Delete");
@@ -684,15 +773,15 @@ public class Main extends Application {
 
             {
                 editButton.setStyle(
-                        "-fx-background-color: #E8ECFF;" +
-                        "-fx-text-fill: #5269CF;" +
+                        "-fx-background-color: #315A35;" +
+                        "-fx-text-fill: #EDF6A1;" +
                         "-fx-background-radius: 7;" +
                         "-fx-cursor: hand;"
                 );
 
                 deleteButton.setStyle(
-                        "-fx-background-color: #FFE8ED;" +
-                        "-fx-text-fill: #D84D70;" +
+                        "-fx-background-color: #527A32;" +
+                        "-fx-text-fill: #EDF6A1;" +
                         "-fx-background-radius: 7;" +
                         "-fx-cursor: hand;"
                 );
@@ -1039,6 +1128,8 @@ public class Main extends Application {
         expertiseCol.setCellValueFactory(new PropertyValueFactory<>("expertise"));
 
         TableColumn<Speaker, Speaker> actionsCol = new TableColumn<>("Actions");
+        actionsCol.setCellValueFactory(cellData ->
+                new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue()));
         actionsCol.setCellFactory(col -> new TableCell<Speaker, Speaker>() {
             private final Button editButton = new Button("Edit");
             private final Button deleteButton = new Button("Delete");
@@ -1046,14 +1137,14 @@ public class Main extends Application {
 
             {
                 editButton.setStyle(
-                    "-fx-background-color: #E8ECFF;" +
-                    "-fx-text-fill: #5269CF;" +
+                    "-fx-background-color: #315A35;" +
+                    "-fx-text-fill: #EDF6A1;" +
                     "-fx-background-radius: 7;" +
                     "-fx-cursor: hand;"
                 );
                 deleteButton.setStyle(
-                    "-fx-background-color: #FFE8ED;" +
-                    "-fx-text-fill: #D84D70;" +
+                    "-fx-background-color: #527A32;" +
+                    "-fx-text-fill: #EDF6A1;" +
                     "-fx-background-radius: 7;" +
                     "-fx-background-radius: 7;" +
                     "-fx-cursor: hand;"
@@ -1286,9 +1377,9 @@ public class Main extends Application {
 
         Button searchBtn = actionButton("Search", NAVY);
         Button refreshBtn = actionButton("Refresh", BLUE);
-        Button addBtn = actionButton("+ Add Seminar", "#9A7BEA");
+        Button addBtn = actionButton("+ Add Seminar", PURPLE);
         Button editBtn = actionButton("Edit Selected", NAVY);
-        Button deleteBtn = actionButton("Delete Selected", "#D9534F");
+        Button deleteBtn = actionButton("Delete Selected", PURPLE);
 
         TableView<Seminar> table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -1556,8 +1647,8 @@ public class Main extends Application {
 
         Button searchBtn = actionButton("Search", NAVY);
         Button refreshBtn = actionButton("Refresh", BLUE);
-        Button addBtn = actionButton("+ Add Registration", "#9A7BEA");
-        Button cancelBtn = actionButton("Cancel Registration", "#D9534F");
+        Button addBtn = actionButton("+ Add Registration", PURPLE);
+        Button cancelBtn = actionButton("Cancel Registration", PURPLE);
 
         TableView<Registration> table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
