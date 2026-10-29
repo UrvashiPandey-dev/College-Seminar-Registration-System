@@ -863,6 +863,80 @@ public class Main extends Application {
 
     // ---------- ADD / EDIT STUDENT ----------
 
+
+    private void applyDialogTheme(Dialog<?> dialog) {
+        var pane = dialog.getDialogPane();
+
+        pane.setStyle(
+            "-fx-background-color: #142D19;" +
+            "-fx-border-color: #527A32;" +
+            "-fx-border-width: 1;"
+        );
+
+        dialog.setOnShown(event -> {
+            pane.setStyle(
+                "-fx-background-color: #142D19;" +
+                "-fx-border-color: #527A32;" +
+                "-fx-border-width: 1;"
+            );
+
+            for (String selector : new String[]{
+                ".header-panel", ".content", ".button-bar",
+                ".header-panel .label", ".content .label"
+            }) {
+                pane.lookupAll(selector).forEach(n ->
+                    n.setStyle(
+                        "-fx-background-color: #142D19;" +
+                        "-fx-text-fill: #EDF6A1;"
+                    )
+                );
+            }
+
+            pane.lookupAll(".label").forEach(n ->
+                n.setStyle("-fx-text-fill: #EDF6A1;")
+            );
+
+            pane.lookupAll(".text-field").forEach(n ->
+                n.setStyle(
+                    "-fx-control-inner-background: #1B3822;" +
+                    "-fx-background-color: #1B3822;" +
+                    "-fx-text-fill: #EDF6A1;" +
+                    "-fx-text-inner-color: #EDF6A1;" +
+                    "-fx-prompt-text-fill: #98AF5B;" +
+                    "-fx-highlight-fill: #527A32;" +
+                    "-fx-border-color: #527A32;" +
+                    "-fx-background-radius: 5;" +
+                    "-fx-border-radius: 5;"
+                )
+            );
+
+            pane.lookupAll(".text-area, .combo-box, .choice-box, .date-picker")
+                .forEach(n -> n.setStyle(
+                    "-fx-background-color: #1B3822;" +
+                    "-fx-text-fill: #EDF6A1;" +
+                    "-fx-border-color: #527A32;"
+                ));
+
+            pane.lookupAll(".spinner").forEach(n ->
+                n.setStyle(
+                    "-fx-background-color: #1B3822;" +
+                    "-fx-border-color: #527A32;"
+                )
+            );
+
+            pane.lookupAll(".button").forEach(n -> {
+                if (n instanceof Button b) {
+                    b.setStyle(
+                        "-fx-background-color: #527A32;" +
+                        "-fx-text-fill: #EDF6A1;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-background-radius: 5;"
+                    );
+                }
+            });
+        });
+    }
+
     private void showStudentForm(Student existingStudent) {
         boolean editing = existingStudent != null;
 
@@ -945,6 +1019,8 @@ public class Main extends Application {
         yearSpinner.setMaxWidth(Double.MAX_VALUE);
 
         dialog.getDialogPane().setContent(grid);
+        applyDialogTheme(dialog);
+        applyDialogTheme(dialog);
         dialog.getDialogPane().setPrefWidth(470);
 
         Button saveButton =
@@ -1270,6 +1346,8 @@ public class Main extends Application {
         grid.getColumnConstraints().addAll(labelColumn, inputColumn);
 
         dialog.getDialogPane().setContent(grid);
+        applyDialogTheme(dialog);
+        applyDialogTheme(dialog);
         dialog.getDialogPane().setPrefWidth(480);
 
         Button saveButton = (Button) dialog.getDialogPane().lookupButton(saveType);
@@ -1578,6 +1656,8 @@ public class Main extends Application {
             }
         }
         dialog.getDialogPane().setContent(grid);
+        applyDialogTheme(dialog);
+        applyDialogTheme(dialog);
         dialog.getDialogPane().setPrefWidth(480);
 
         Node saveButton = dialog.getDialogPane().lookupButton(saveType);
@@ -1838,6 +1918,8 @@ public class Main extends Application {
         grid.add(dateValue, 1, 3);
 
         dialog.getDialogPane().setContent(grid);
+        applyDialogTheme(dialog);
+        applyDialogTheme(dialog);
         dialog.getDialogPane().setPrefWidth(480);
 
         Node saveButton = dialog.getDialogPane().lookupButton(saveType);
